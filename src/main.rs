@@ -17,13 +17,11 @@ async fn main() {
 
     let backend = create_backend();
 
-    let joined = format!("0.0.0.0:{}", config.port);
-
-    let listener = tokio::net::TcpListener::bind(&joined)
+    let listener = tokio::net::TcpListener::bind(&config.domain)
         .await
         .expect("failed to bind tcp listener");
 
-    println!("Server running on {:?}", &joined);
+    println!("Server running on {:?}", &config.domain);
 
     axum::serve(listener, backend)
         .await
