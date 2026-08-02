@@ -1,6 +1,5 @@
 use axum::{Json, response::IntoResponse};
 use lettre::Transport;
-use lettre::message::Mailbox;
 use lettre::{Message, SmtpTransport, transport::smtp::authentication::Credentials};
 use serde_json::json;
 
@@ -9,9 +8,10 @@ use crate::error::ApiError;
 use crate::models::EmailRequest;
 
 pub async fn send_email(Json(request): Json<EmailRequest>) -> Result<impl IntoResponse, ApiError> {
-    if request.name.trim().is_empty() {
-        return Err(ApiError::InvalidInput("name must not be empty".to_string()));
-    }
+    println!("Email: {}", request.email);
+    println!("Subject: {}", request.subject);
+    println!("Message: {}", request.message);
+
     if request.message.trim().is_empty() {
         return Err(ApiError::InvalidInput(
             "message must not be empty".to_string(),
@@ -20,35 +20,30 @@ pub async fn send_email(Json(request): Json<EmailRequest>) -> Result<impl IntoRe
 
     let config = Config::load();
 
-    let reply_to: Mailbox = request
-        .email
-        .parse()
-        .map_err(|_| ApiError::InvalidInput(format!("invalid email address: {}", request.email)))?;
-
-    let from: Mailbox = config.user.parse().map_err(|_| ApiError::InternalError)?;
-    let to: Mailbox = "sofushl@proton.me"
-        .parse()
-        .map_err(|_| ApiError::InternalError)?;
-
     let mail = Message::builder()
-        .from(from)
-        .to(to)
-        .reply_to(reply_to)
+        .from(config.email.parse().unwrap())
+        .to("sofushl@proton.me".parse().unwrap())
         .subject(request.subject)
-        .body(request.message)
-        .map_err(|_| ApiError::InternalError)?;
+        .cc(request.email.parse().unwrap())
+        .body(String::from(request.message))
+        .unwrap();
 
-    let creds = Credentials::new(config.user, config.password);
+    let creds = Credentials::new(config.email, config.password);
 
     let mailer = SmtpTransport::relay(&config.server)
-        .map_err(|_| ApiError::InternalError)?
+        .unwrap()
         .credentials(creds)
         .build();
 
-    mailer.send(&mail).map_err(|e| {
-        eprintln!("Could not send email: {:?}", e);
-        ApiError::InternalError
-    })?;
+    match mailer.send(&mail) {
+        Ok(_) => println!("Email sent successfully!"),
+        Err(e) => {
+            return Err(ApiError::InternalError(format!(
+                "Could not send email {}",
+                e
+            )));
+        }
+    }
 
     Ok(Json(json!({"status":"sent"})))
 }

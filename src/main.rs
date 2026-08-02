@@ -17,8 +17,7 @@ async fn main() {
 
     let backend = create_backend();
 
-    let string_list = vec!["0.0.0.0:".to_string(), config.port];
-    let joined = string_list.join("");
+    let joined = format!("0.0.0.0:{}", config.port);
 
     let listener = tokio::net::TcpListener::bind(&joined)
         .await
