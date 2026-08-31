@@ -22,11 +22,20 @@ pub async fn send_email(Json(request): Json<EmailRequest>) -> Result<impl IntoRe
 
     let mail = Message::builder()
         .from(config.email.parse().unwrap())
-        .to("sofushl@proton.me".parse().unwrap())
+        .to(config.receiver.parse().unwrap())
         .subject(request.subject)
-        .cc(request.email.parse().unwrap())
-        .body(String::from(request.message))
+        .body(String::from(&request.message))
         .unwrap();
+
+    //let confirmation = Message::builder()
+    //    .from(config.email.parse().unwrap())
+    //    .to(request.email.parse().unwrap())
+    //    .subject("Your email was recieved")
+    //    .body(format!(
+    //        "Your message: \n {} \n was received",
+    //        String::from(&request.message),
+    //    ))
+    //    .unwrap();
 
     let creds = Credentials::new(config.email, config.password);
 
@@ -36,7 +45,20 @@ pub async fn send_email(Json(request): Json<EmailRequest>) -> Result<impl IntoRe
         .build();
 
     match mailer.send(&mail) {
-        Ok(_) => println!("Email sent successfully!"),
+        Ok(_) => {
+            println!("Email sent successfully!");
+            //match mailer.send(&confirmation) {
+            //    Ok(_) => {
+            //        println!("Confirmation email sent successfully!");
+            //    }
+            //    Err(e) => {
+            //        return Err(ApiError::InternalError(format!(
+            //            "Could not send email {}",
+            //            e
+            //        )));
+            //    }
+            //}
+        }
         Err(e) => {
             return Err(ApiError::InternalError(format!(
                 "Could not send email {}",
